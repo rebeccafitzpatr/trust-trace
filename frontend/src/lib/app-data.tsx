@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -25,6 +26,7 @@ import type { AppSnapshot, AssetData, KOL } from "../types";
 type AppDataContextValue = {
   snapshot: AppSnapshot | null;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   getAssetByKey: (chainId: string, contractAddress: string) => AssetData | undefined;
@@ -36,10 +38,17 @@ const AppDataContext = createContext<AppDataContextValue | null>(null);
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const snapshotRef = useRef<AppSnapshot | null>(null);
 
-  const load = useCallback(async () => {
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  const load = useCallback(async (manualRefresh = false) => {
     setLoading(true);
+    setRefreshing(manualRefresh || Boolean(snapshotRef.current));
     setError(null);
 
     try {
@@ -55,8 +64,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           fetchKOLFeed(40),
         ]);
 
+      const alertCandidates = tokenList.items.slice(0, 12);
       const alertDetailResults = await Promise.allSettled(
-        tokenList.items.map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
+        alertCandidates.map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
       );
       const alertDetails = alertDetailResults.flatMap((result) =>
         result.status === "fulfilled" ? [result.value] : [],
@@ -83,6 +93,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -94,13 +105,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     () => ({
       snapshot,
       loading,
+      refreshing,
       error,
-      refresh: load,
+      refresh: () => load(true),
       getAssetByKey: (chainId, contractAddress) =>
         snapshot?.assets[tokenKey(chainId, contractAddress)],
       getKOLById: (handle) => snapshot?.kols[handle.replace(/^@/, "")],
     }),
-    [error, load, loading, snapshot],
+    [error, load, loading, refreshing, snapshot],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

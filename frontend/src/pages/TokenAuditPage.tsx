@@ -63,6 +63,7 @@ export function TokenAuditPage({ assets, onScan }: TokenAuditPageProps) {
   const [query, setQuery] = useState("");
   const [selectedAsset, setSelectedAsset] = useState<AssetData | null>(null);
   const [result, setResult] = useState<TokenAuditResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const assetList = useMemo(() => Object.values(assets), [assets]);
@@ -85,15 +86,26 @@ export function TokenAuditPage({ assets, onScan }: TokenAuditPageProps) {
 
   async function handleScan(asset = selectedAsset ?? filteredAssets[0] ?? null) {
     if (!asset) {
+      setResult(null);
+      setError("Select a tracked token before starting an audit.");
       return;
     }
 
     setSelectedAsset(asset);
     setLoading(true);
+    setError(null);
+    setResult(null);
 
     try {
       const scanResult = await onScan(asset);
       setResult(scanResult);
+    } catch (caughtError) {
+      setResult(null);
+      setError(
+        caughtError instanceof Error
+          ? caughtError.message
+          : "The token audit could not be loaded.",
+      );
     } finally {
       setLoading(false);
     }
@@ -169,7 +181,35 @@ export function TokenAuditPage({ assets, onScan }: TokenAuditPageProps) {
               </button>
             ))}
           </div>
+          {error ? (
+            <div
+              role="alert"
+              className="mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border border-red-500/30 bg-red-500/10 px-3 py-3 text-sm text-red-200"
+            >
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-red-300" />
+                <span>{error}</span>
+              </div>
+              {selectedAsset ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => void handleScan(selectedAsset)}
+                  disabled={loading}
+                  className="border-red-400/30 bg-transparent text-red-100 hover:bg-red-500/10"
+                >
+                  Retry scan
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </GlassCard>
+
+        {!result && !loading && !error ? (
+          <GlassCard className="border border-white/10 p-6 text-center text-sm text-white/60">
+            Choose a tracked token to view its latest security audit.
+          </GlassCard>
+        ) : null}
 
         {result ? (
           <div className="space-y-4 sm:space-y-6">
