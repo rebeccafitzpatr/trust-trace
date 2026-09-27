@@ -35,6 +35,22 @@ type AppDataContextValue = {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
+async function fetchAlertDetails(
+  items: Array<{ chain_id: string; contract_address: string }>,
+  concurrency = 4,
+) {
+  const details = [];
+  for (let index = 0; index < items.length; index += concurrency) {
+    const batch = await Promise.allSettled(
+      items
+        .slice(index, index + concurrency)
+        .map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
+    );
+    details.push(...batch.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])));
+  }
+  return details;
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
@@ -47,7 +63,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [snapshot]);
 
   const load = useCallback(async (manualRefresh = false) => {
-    setLoading(true);
+    setLoading(!snapshotRef.current);
     setRefreshing(manualRefresh || Boolean(snapshotRef.current));
     setError(null);
 
@@ -65,12 +81,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ]);
 
       const alertCandidates = tokenList.items.slice(0, 12);
-      const alertDetailResults = await Promise.allSettled(
-        alertCandidates.map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
-      );
-      const alertDetails = alertDetailResults.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
+        const alertDetails = await fetchAlertDetails(alertCandidates);
 
       setSnapshot(
         adaptAppSnapshot({
