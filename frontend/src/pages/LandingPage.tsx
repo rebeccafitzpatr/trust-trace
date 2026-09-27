@@ -142,15 +142,16 @@ export function LandingPage({
         </div>
       </div>
 
-      <div className="w-full backdrop-blur-xl bg-white/5 border-y border-white/10 py-3 sm:py-4 overflow-hidden mb-8 sm:mb-12 lg:mb-16">
-        <div className="flex items-center gap-3 mb-2 sm:mb-3 px-4 sm:px-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 mb-8 sm:mb-12 lg:mb-16">
+        <div className="backdrop-blur-xl bg-white/5 border border-white/10 rounded-2xl py-3 sm:py-4 overflow-hidden">
+        <div className="flex items-center gap-3 mb-2 sm:mb-3 px-4 sm:px-6">
           <Circle className="w-2.5 h-2.5 text-red-400 fill-red-400 animate-pulse" />
           <span className="text-xs font-semibold text-white/80 uppercase tracking-wide">
             Recent KOL activity
           </span>
         </div>
-        <div className="relative flex overflow-x-hidden">
-          <div className="flex animate-scroll gap-4 sm:gap-6 px-4 sm:px-8">
+        <div className="ticker-fade relative flex overflow-x-hidden">
+          <div className="flex animate-scroll gap-4 sm:gap-6 px-4 sm:px-6">
             {[...liveCalls, ...liveCalls, ...liveCalls].map((item, index) => {
               if (!item.kol) {
                 return null;
@@ -179,6 +180,7 @@ export function LandingPage({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
 
