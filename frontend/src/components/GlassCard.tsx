@@ -8,9 +8,19 @@ interface GlassCardProps {
 }
 
 export function GlassCard({ children, className = '', onClick, hover = false }: GlassCardProps) {
+  const isInteractive = Boolean(onClick);
+
   return (
     <div
       onClick={onClick}
+      onKeyDown={(event) => {
+        if (isInteractive && (event.key === 'Enter' || event.key === ' ')) {
+          event.preventDefault();
+          onClick?.();
+        }
+      }}
+      role={isInteractive ? 'button' : undefined}
+      tabIndex={isInteractive ? 0 : undefined}
       className={`
         backdrop-blur-xl bg-white/5
         border border-white/10

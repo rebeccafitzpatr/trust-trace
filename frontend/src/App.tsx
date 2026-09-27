@@ -147,7 +147,7 @@ function TokenAuditRoute() {
 }
 
 function AppRoutes() {
-  const { snapshot, loading, error } = useAppData();
+  const { snapshot, loading, refreshing, error } = useAppData();
 
   if (loading && !snapshot) {
     return (
@@ -172,26 +172,33 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          <LandingPage
-            kols={snapshot.kols}
-            feed={snapshot.feed}
-            validationStatus={snapshot.validationStatus}
-          />
-        }
-      />
+    <>
+      {refreshing ? (
+        <div className="fixed inset-x-0 top-0 z-50 border-b border-purple-500/30 bg-purple-500/10 px-3 py-2 text-center text-xs text-purple-100 backdrop-blur-sm">
+          Refreshing TrustTrace data…
+        </div>
+      ) : null}
 
-      <Route
-        path="/*"
-        element={
-          <div className="size-full flex">
-            <Sidebar />
-            <ChatBot />
-            <div className="flex-1 lg:ml-64 relative z-10">
-              <Routes>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              kols={snapshot.kols}
+              feed={snapshot.feed}
+              validationStatus={snapshot.validationStatus}
+            />
+          }
+        />
+
+        <Route
+          path="/*"
+          element={
+            <div className="size-full flex">
+              <Sidebar />
+              <ChatBot />
+              <div className="flex-1 lg:ml-64 relative z-10">
+                <Routes>
                 <Route
                   path="/dashboard"
                   element={
@@ -232,16 +239,17 @@ function AppRoutes() {
                     />
                   }
                 />
-                <Route
-                  path="*"
-                  element={<FullScreenState title="404" message="That route does not exist in the current TrustTrace app." />}
-                />
-              </Routes>
+                  <Route
+                    path="*"
+                    element={<FullScreenState title="404" message="That route does not exist in the current TrustTrace app." />}
+                  />
+                </Routes>
+              </div>
             </div>
-          </div>
-        }
-      />
-    </Routes>
+          }
+        />
+      </Routes>
+    </>
   );
 }
 

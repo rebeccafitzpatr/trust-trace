@@ -20,6 +20,9 @@ export function Sidebar() {
     <>
       {/* Mobile Menu Button */}
       <button
+        type="button"
+        aria-label={isOpen ? 'Close navigation menu' : 'Open navigation menu'}
+        aria-expanded={isOpen}
         onClick={() => setIsOpen(!isOpen)}
         className="lg:hidden fixed top-4 left-4 z-50 p-2 rounded-lg bg-white/5 backdrop-blur-xl border border-white/10 text-white"
       >
@@ -28,7 +31,9 @@ export function Sidebar() {
 
       {/* Overlay for mobile */}
       {isOpen && (
-        <div
+        <button
+          type="button"
+          aria-label="Close navigation menu"
           className="lg:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsOpen(false)}
         />
@@ -60,6 +65,8 @@ export function Sidebar() {
 
             return (
               <button
+                type="button"
+                aria-current={isActive ? 'page' : undefined}
                 key={item.label}
                 onClick={() => {
                   navigate(item.path);
@@ -80,6 +87,7 @@ export function Sidebar() {
 
         <div className="p-4 border-t border-white/10 relative z-10">
           <button
+            type="button"
             onClick={() => {
               navigate('/settings');
               setIsOpen(false);

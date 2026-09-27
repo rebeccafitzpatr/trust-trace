@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 
@@ -25,6 +26,7 @@ import type { AppSnapshot, AssetData, KOL } from "../types";
 type AppDataContextValue = {
   snapshot: AppSnapshot | null;
   loading: boolean;
+  refreshing: boolean;
   error: string | null;
   refresh: () => Promise<void>;
   getAssetByKey: (chainId: string, contractAddress: string) => AssetData | undefined;
@@ -33,13 +35,36 @@ type AppDataContextValue = {
 
 const AppDataContext = createContext<AppDataContextValue | null>(null);
 
+async function fetchAlertDetails(
+  items: Array<{ chain_id: string; contract_address: string }>,
+  concurrency = 4,
+) {
+  const details = [];
+  for (let index = 0; index < items.length; index += concurrency) {
+    const batch = await Promise.allSettled(
+      items
+        .slice(index, index + concurrency)
+        .map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
+    );
+    details.push(...batch.flatMap((result) => (result.status === "fulfilled" ? [result.value] : [])));
+  }
+  return details;
+}
+
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [snapshot, setSnapshot] = useState<AppSnapshot | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const snapshotRef = useRef<AppSnapshot | null>(null);
 
-  const load = useCallback(async () => {
-    setLoading(true);
+  useEffect(() => {
+    snapshotRef.current = snapshot;
+  }, [snapshot]);
+
+  const load = useCallback(async (manualRefresh = false) => {
+    setLoading(!snapshotRef.current);
+    setRefreshing(manualRefresh || Boolean(snapshotRef.current));
     setError(null);
 
     try {
@@ -55,12 +80,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           fetchKOLFeed(40),
         ]);
 
-      const alertDetailResults = await Promise.allSettled(
-        tokenList.items.map((item) => fetchTokenDetail(item.chain_id, item.contract_address)),
-      );
-      const alertDetails = alertDetailResults.flatMap((result) =>
-        result.status === "fulfilled" ? [result.value] : [],
-      );
+      const alertCandidates = tokenList.items.slice(0, 12);
+        const alertDetails = await fetchAlertDetails(alertCandidates);
 
       setSnapshot(
         adaptAppSnapshot({
@@ -83,6 +104,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       );
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, []);
 
@@ -94,13 +116,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     () => ({
       snapshot,
       loading,
+      refreshing,
       error,
-      refresh: load,
+      refresh: () => load(true),
       getAssetByKey: (chainId, contractAddress) =>
         snapshot?.assets[tokenKey(chainId, contractAddress)],
       getKOLById: (handle) => snapshot?.kols[handle.replace(/^@/, "")],
     }),
-    [error, load, loading, snapshot],
+    [error, load, loading, refreshing, snapshot],
   );
 
   return <AppDataContext.Provider value={value}>{children}</AppDataContext.Provider>;

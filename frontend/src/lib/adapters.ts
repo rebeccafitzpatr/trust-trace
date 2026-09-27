@@ -709,7 +709,15 @@ function mapMention(mention: {
 
 function getOutcomeLabel(call: KOLTrackRecordCallResponse): Call["outcome"] {
   if (call.evaluation_status === "evaluated") {
-    return call.is_hit ? "win" : "loss";
+    if (call.is_hit === true) {
+      return "win";
+    }
+
+    if (call.is_hit === false) {
+      return "loss";
+    }
+
+    return "pending";
   }
 
   if (call.evaluation_status === "skipped_neutral") {
@@ -838,7 +846,14 @@ export function adaptKolDetail(
     kol,
     notes: detail.profile.notes,
     trackedSince: formatTrackedSince(detail.profile.created_at),
-    wallets: [],
+    wallets: detail.wallets.map((wallet) => ({
+      chainName: wallet.chain_name,
+      address: wallet.address,
+      sourceType: wallet.source_type,
+      sourceUrl: wallet.source_url,
+      confidence: wallet.confidence,
+      createdAt: wallet.created_at,
+    })),
     recentPosts,
     mentions: detail.mentions.map(mapMention),
     trackRecord: {
